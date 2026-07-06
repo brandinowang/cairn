@@ -1,0 +1,60 @@
+:root {
+  --bg: #0a0b0c;
+  --panel: #111315;
+  --panel-2: #16181b;
+  --line: #24272b;
+  --text: #e7e9ea;
+  --text-dim: #8a9096;
+  --text-mute: #565c61;
+  --accent: #e5372a;
+  --accent-dim: #7a231c;
+  --ok: #6fcf97;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+input,
+button,
+textarea {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--text);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-mute);
+}

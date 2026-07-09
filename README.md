@@ -25,7 +25,9 @@ npm test
 
 ## Deploy
 
-Live on [Vercel](https://vercel.com) — connect the [GitHub repo](https://github.com/brandinowang/cairn) and deploy with default Vite settings (`npm run build`, output `dist`).
+**Live:** https://cairn-lilac.vercel.app
+
+Hosted on [Vercel](https://vercel.com/brandino/cairn) from the [GitHub repo](https://github.com/brandinowang/cairn). Build settings: `npm run build`, output `dist` (see `vercel.json`).
 
 ## Keyboard shortcuts
 

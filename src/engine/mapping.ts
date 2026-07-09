@@ -1,116 +1,67 @@
-import type { Category, StoneParams, Task } from '../types';
+import type { Category, FieldPrimitive, Task } from '../types';
+import type { GrowthStep, ResolvedFormProfile } from './blueprints';
 import { mulberry32 } from './rng';
 
-// ── Tunable constants ──────────────────────────────────────────────
 export const PRIORITY_MASS: Record<Task['priority'], number> = {
-  low: 0.72,
+  low: 0.96,
   med: 1.0,
-  high: 1.35,
+  high: 1.12,
 };
 
-export const ASPECT_MIN = 0.4;
-export const ASPECT_MAX = 2.6;
-export const TITLE_LENGTH_MIN = 0;
-export const TITLE_LENGTH_MAX = 60;
-
-export const COMPLEXITY_MIN = 0.05;
-export const COMPLEXITY_MAX = 1.0;
-export const HOURS_MIN = 0;
-export const HOURS_MAX = 72;
-
-export const CATEGORY_PRIMITIVE: Record<string, StoneParams['primitive']> = {
-  studio: 'slab',
-  admin: 'shard',
-  design: 'facet',
-  build: 'core',
-  signal: 'core',
-};
-
-export const DEFAULT_PRIMITIVES: StoneParams['primitive'][] = [
-  'slab',
-  'shard',
-  'core',
-  'nodule',
-  'facet',
-];
-
-export const NO_CATEGORY_MATERIALS: Array<'aluminum' | 'walnut' | 'graphite'> = [
-  'aluminum',
-  'walnut',
-  'graphite',
-];
+export const BASE_MASS = 1.15;
 
 const SIGNAL_CATEGORY_NAME = 'SIGNAL';
 
 function mapTitleToAspect(titleLength: number): number {
-  const t = Math.max(TITLE_LENGTH_MIN, Math.min(TITLE_LENGTH_MAX, titleLength));
-  const ratio = (t - TITLE_LENGTH_MIN) / (TITLE_LENGTH_MAX - TITLE_LENGTH_MIN);
-  return ASPECT_MIN + ratio * (ASPECT_MAX - ASPECT_MIN);
-}
-
-function mapDurationToComplexity(createdAt: number, completedAt: number): number {
-  const hours = (completedAt - createdAt) / 3.6e6;
-  const h = Math.max(HOURS_MIN, Math.min(HOURS_MAX, hours));
-  const ratio = (h - HOURS_MIN) / (HOURS_MAX - HOURS_MIN);
-  return COMPLEXITY_MIN + ratio * (COMPLEXITY_MAX - COMPLEXITY_MIN);
-}
-
-function pickPrimitive(
-  category: Category | null,
-  rng: () => number,
-): StoneParams['primitive'] {
-  if (category) {
-    const key = category.name.toLowerCase();
-    if (CATEGORY_PRIMITIVE[key]) {
-      return CATEGORY_PRIMITIVE[key];
-    }
-  }
-  const idx = Math.floor(rng() * DEFAULT_PRIMITIVES.length);
-  return DEFAULT_PRIMITIVES[idx];
+  const t = Math.max(0, Math.min(60, titleLength));
+  return 0.98 + (t / 60) * 0.04;
 }
 
 function pickMaterial(
   task: Task,
   category: Category | null,
-  rng: () => number,
-): StoneParams['material'] {
-  const isSignalCategory =
-    category?.name.toUpperCase() === SIGNAL_CATEGORY_NAME;
-  if (task.priority === 'high' || isSignalCategory) {
-    return 'red';
-  }
-  if (category) {
-    return category.material;
-  }
-  const idx = Math.floor(rng() * NO_CATEGORY_MATERIALS.length);
-  return NO_CATEGORY_MATERIALS[idx];
+): FieldPrimitive['material'] {
+  const isSignal = category?.name.toUpperCase() === SIGNAL_CATEGORY_NAME;
+  if (task.priority === 'high' || isSignal) return 'red';
+  if (category) return category.material;
+  return 'aluminum';
 }
 
-export function taskToStone(task: Task, category: Category | null): StoneParams {
+export function taskToPrimitive(
+  task: Task,
+  category: Category | null,
+  profile: ResolvedFormProfile | null = null,
+  step: GrowthStep | null = null,
+  _depositIndex = 0,
+): FieldPrimitive {
   const rng = mulberry32(task.seed);
+  const [aspectMin, aspectMax] = profile?.aspectRange ?? [0.55, 0.75];
+  const titleAspect = mapTitleToAspect(task.title.length);
+  const aspectScale = step?.aspectScale ?? 1;
+  const aspect =
+    (aspectMin + rng() * (aspectMax - aspectMin)) * titleAspect * aspectScale;
 
-  const primitive = pickPrimitive(category, rng);
-  const mass = PRIORITY_MASS[task.priority] * (0.9 + 0.2 * rng());
-  const aspect = mapTitleToAspect(task.title.length);
-  const complexity =
-    task.completedAt != null
-      ? mapDurationToComplexity(task.createdAt, task.completedAt)
-      : COMPLEXITY_MIN;
-  const material = pickMaterial(task, category, rng);
-  const rotationSeed = rng();
-  const jitter: [number, number] = [
-    (rng() - 0.5) * 2,
-    (rng() - 0.5) * 2,
-  ];
+  const massScale = step?.massScale ?? 1;
+  const isAccent = task.priority === 'high' || category?.name.toUpperCase() === SIGNAL_CATEGORY_NAME;
+  const mass =
+    BASE_MASS *
+    PRIORITY_MASS[task.priority] *
+    massScale *
+    (isAccent ? 0.72 : 1) *
+    (0.98 + rng() * 0.04);
 
   return {
     taskId: task.id,
-    primitive,
+    type: 'box',
     mass,
     aspect,
-    complexity,
-    material,
-    rotationSeed,
-    jitter,
+    complexity: 0,
+    material: pickMaterial(task, category),
+    rotationSeed: 0,
+    cornerRadius: 0.012,
+    position: [0, 0, 0],
   };
 }
+
+/** @deprecated alias */
+export const taskToStone = taskToPrimitive;

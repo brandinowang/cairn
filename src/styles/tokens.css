@@ -1,14 +1,46 @@
 :root {
-  --bg: #0a0b0c;
-  --panel: #111315;
-  --panel-2: #16181b;
-  --line: #24272b;
-  --text: #e7e9ea;
-  --text-dim: #8a9096;
-  --text-mute: #565c61;
-  --accent: #e5372a;
-  --accent-dim: #7a231c;
-  --ok: #6fcf97;
+  --paper: #eaebec;
+  --surface: #f5f6f7;
+  --surface-hi: #ffffff;
+  --line: #dee0e2;
+  --line-strong: #cdd0d3;
+  --ink: #17191b;
+  --ink-dim: #6a6f74;
+  --ink-mute: #9ba0a5;
+  --accent: #e1352a;
+  --accent-press: #b82a21;
+  --mat-aluminum: #a6abaf;
+  --mat-walnut: #3e2c20;
+  --mat-graphite: #202325;
+  --mat-red: #c4291e;
+  --stage-top: #e9eaeb;
+  --stage-floor: #d6d8da;
+  --shadow-raised: 0 1px 2px rgba(20, 22, 24, 0.04), 0 8px 24px rgba(20, 22, 24, 0.05);
+  --radius-card: 12px;
+  --radius-chip: 8px;
+  --radius-panel: 16px;
+  --focus-ring: 0 0 0 2px rgba(225, 53, 42, 0.18);
+}
+
+.dark {
+  --paper: #121416;
+  --surface: #1a1c1f;
+  --surface-hi: #23262b;
+  --line: #2d3137;
+  --line-strong: #3a4048;
+  --ink: #eceef0;
+  --ink-dim: #a8adb3;
+  --ink-mute: #707780;
+  --accent: #e84840;
+  --accent-press: #c9332b;
+  --mat-aluminum: #b8bdc3;
+  --mat-walnut: #8a6848;
+  --mat-graphite: #9aa1a9;
+  --mat-red: #e04a40;
+  --stage-top: #1f2328;
+  --stage-floor: #14171b;
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.28), 0 8px 24px rgba(0, 0, 0, 0.32);
+  --focus-ring: 0 0 0 2px rgba(232, 72, 64, 0.28);
 }
 
 * {
@@ -24,23 +56,33 @@ body,
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Geist', system-ui, sans-serif;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 
 input,
 button,
-textarea {
+textarea,
+select {
   font-family: inherit;
 }
 
 ::selection {
-  background: var(--accent-dim);
-  color: var(--text);
+  background: rgba(225, 53, 42, 0.12);
+  color: var(--ink);
+}
+
+.dark ::selection {
+  background: rgba(232, 72, 64, 0.22);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 ::-webkit-scrollbar {
@@ -48,13 +90,20 @@ textarea {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--panel);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--line);
+  background: var(--line-strong);
+  border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-mute);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

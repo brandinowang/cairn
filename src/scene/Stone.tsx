@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { a, useSpring } from '@react-spring/three';
 import type { PlacedStone } from '../types';
+import { useStore } from '../store/useStore';
 import { buildGeometry } from '../engine/geometry';
 import { createMaterial } from '../engine/materials';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 interface StoneProps {
   stone: PlacedStone;
@@ -16,16 +18,19 @@ function AnimatedStone({
   isNew,
   isRemoving,
   onSettled,
+  reducedMotion,
 }: Required<Pick<StoneProps, 'stone'>> & {
   isNew: boolean;
   isRemoving: boolean;
   onSettled?: () => void;
+  reducedMotion: boolean;
 }) {
+  const colorScheme = useStore((s) => s.colorScheme);
   const geo = useMemo(() => buildGeometry(stone.params), [stone.params]);
   const material = useMemo(() => {
-    const mat = createMaterial(stone.params.material);
+    const mat = createMaterial(stone.params.material, colorScheme);
     return mat.clone();
-  }, [stone.params.material]);
+  }, [stone.params.material, colorScheme]);
 
   const startY = stone.position[1] + stone.height * 1.5;
   const exitY = stone.position[1] + stone.height * 1.2;
@@ -33,10 +38,17 @@ function AnimatedStone({
   const springs = useSpring({
     posY: isRemoving ? exitY : stone.position[1],
     opacity: isRemoving ? 0 : 1,
-    from: isNew ? { posY: startY, opacity: 0.5 } : undefined,
-    config: isRemoving
-      ? { tension: 280, friction: 26 }
-      : { tension: 170, friction: 12, mass: 1.1 },
+    from: isNew
+      ? reducedMotion
+        ? { posY: stone.position[1], opacity: 0 }
+        : { posY: startY, opacity: 0.5 }
+      : undefined,
+    immediate: reducedMotion && !isRemoving,
+    config: reducedMotion
+      ? { tension: 300, friction: 30 }
+      : isRemoving
+        ? { tension: 280, friction: 26 }
+        : { tension: 165, friction: 14, mass: 1.05 },
     onRest: () => onSettled?.(),
   });
 
@@ -51,16 +63,17 @@ function AnimatedStone({
       castShadow
       receiveShadow
       material-opacity={springs.opacity}
-      material-transparent
+      material-transparent={isNew || isRemoving}
     />
   );
 }
 
 function StaticStone({ stone }: { stone: PlacedStone }) {
+  const colorScheme = useStore((s) => s.colorScheme);
   const geo = useMemo(() => buildGeometry(stone.params), [stone.params]);
   const material = useMemo(
-    () => createMaterial(stone.params.material),
-    [stone.params.material],
+    () => createMaterial(stone.params.material, colorScheme),
+    [stone.params.material, colorScheme],
   );
 
   return (
@@ -76,6 +89,8 @@ function StaticStone({ stone }: { stone: PlacedStone }) {
 }
 
 export function Stone({ stone, isNew = false, isRemoving = false, onSettled }: StoneProps) {
+  const reducedMotion = useReducedMotion();
+
   if (isNew || isRemoving) {
     return (
       <AnimatedStone
@@ -83,6 +98,7 @@ export function Stone({ stone, isNew = false, isRemoving = false, onSettled }: S
         isNew={isNew}
         isRemoving={isRemoving}
         onSettled={onSettled}
+        reducedMotion={reducedMotion}
       />
     );
   }

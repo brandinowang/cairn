@@ -1,39 +1,57 @@
 import { useStore } from '../store/useStore';
-import { buildCairnStructure } from '../engine/structure';
+import { buildFusedStructure } from '../engine/structure';
+import { buildVoronoiStructure } from '../engine/voronoi';
+import { captureCanvasPNG, exportFusedSTL, exportVoronoiSTL } from '../engine/export';
+import { computeBlendK } from '../engine/field';
+import { getCompletedTasks } from '../engine/structure';
 
-interface HudProps {
-  cameraPos?: [number, number, number];
-}
-
-export function Hud({ cameraPos }: HudProps) {
+export function Hud() {
   const presentationMode = useStore((s) => s.presentationMode);
   const mode = useStore((s) => s.mode);
   const tasks = useStore((s) => s.tasks);
   const categories = useStore((s) => s.categories);
+  const refineLevel = useStore((s) => s.refineLevel);
+  const resolvedArchetype = useStore((s) => s.resolvedArchetype);
+  const formSeed = useStore((s) => s.formSeed);
+  const viewportCanvas = useStore((s) => s.viewportCanvas);
 
-  const structure = buildCairnStructure(tasks, categories);
-  const stoneCount = structure.stones.length;
+  const fused = buildFusedStructure(tasks, categories, refineLevel, resolvedArchetype, 0, formSeed);
+  const voronoi = buildVoronoiStructure(tasks, categories);
+  const formCount = mode === 'cairn' ? fused.primitives.length : voronoi.cells.length;
+  const serial = mode === 'cairn' ? fused.serial : voronoi.serial;
+
+  const handleCapture = () => {
+    if (viewportCanvas) captureCanvasPNG(viewportCanvas, 2);
+  };
+
+  const handleExportStructure = () => {
+    if (mode === 'cairn') {
+      const exportStructure = {
+        ...fused,
+        blendK: computeBlendK(getCompletedTasks(tasks).length, refineLevel),
+      };
+      exportFusedSTL(exportStructure);
+    } else exportVoronoiSTL(voronoi.cells, voronoi.serial);
+  };
 
   if (presentationMode) {
     return (
-      <div className="absolute bottom-4 left-4 pointer-events-none">
-        <span className="font-mono text-[10px] text-text-mute tracking-widest uppercase">
-          {structure.serial}
-        </span>
+      <div className="absolute bottom-5 left-5 pointer-events-none">
+        <span className="font-mono text-[10px] text-ink-mute tracking-wide">{serial}</span>
       </div>
     );
   }
 
   return (
-    <div className="absolute top-3 right-3 pointer-events-none font-mono text-[10px] text-text-mute tracking-wider uppercase space-y-0.5 text-right">
-      <div>{structure.serial}</div>
-      <div>STONES {stoneCount.toString().padStart(3, '0')}</div>
-      <div>MODE {mode}</div>
-      {cameraPos && (
-        <div>
-          CAM {cameraPos[0].toFixed(1)} {cameraPos[1].toFixed(1)} {cameraPos[2].toFixed(1)}
-        </div>
+    <div className="absolute bottom-5 right-5 flex gap-2 pointer-events-auto bg-surface-hi/80 backdrop-blur-sm rounded-xl px-2 py-1.5 border border-line shadow-raised">
+      {formCount > 0 && (
+        <button type="button" onClick={handleExportStructure} className="btn-ghost text-[12px]">
+          Export STL
+        </button>
       )}
+      <button type="button" onClick={handleCapture} className="btn-ghost text-[12px]">
+        Capture
+      </button>
     </div>
   );
 }

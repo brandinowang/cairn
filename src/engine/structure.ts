@@ -1,71 +1,107 @@
-import type { Category, CairnStructure, PlacedStone, StoneParams, Task } from '../types';
-import { buildGeometry, getGeometryHeight } from './geometry';
-import { taskToStone } from './mapping';
+import type { Archetype, Category, FusedStructure, Task } from '../types';
+import { buildFieldPrimitives, dominantMaterial, pickArchetype } from './accretion';
+import { resolveFormProfile } from './blueprints';
+import { computeBlendK, fieldCacheKey } from './field';
+import { taskToPrimitive } from './mapping';
 import { xfnv1a } from './rng';
 
-// ── Tunable constants ──────────────────────────────────────────────
-export const JITTER_SCALE = 0.03;
-export const LEAN_PER_STONE = 0.004;
-export const MAX_LEAN = 0.12;
-export const LEAN_CORRECTION = 0.85;
-
-export function computeStoneParams(
-  task: Task,
-  categories: Category[],
-): StoneParams | null {
-  if (task.completedAt == null) return null;
-  const category = categories.find((c) => c.id === task.categoryId) ?? null;
-  return taskToStone(task, category);
+export function getCompletedTasks(tasks: Task[]): Task[] {
+  return tasks
+    .filter((t) => t.completedAt != null)
+    .sort((a, b) => a.completedAt! - b.completedAt!);
 }
 
-export function buildCairnStructure(
+export function buildSerial(completed: Task[]): string {
+  return `CRN-${xfnv1a(completed.map((t) => t.id).join('')).toString(16).toUpperCase().slice(0, 6)}-${completed.length.toString().padStart(3, '0')}`;
+}
+
+export function buildFusedStructure(
   tasks: Task[],
   categories: Category[],
-): CairnStructure {
-  const completed = tasks
-    .filter((t) => t.completedAt != null)
-    .sort((a, b) => (a.completedAt! - b.completedAt!));
+  refineLevel: number,
+  resolvedArchetype: Archetype | null,
+  animBlendBoost = 0,
+  formSeed = 0,
+): FusedStructure {
+  const completed = getCompletedTasks(tasks);
+  const autoArchetype = pickArchetype(tasks, categories, formSeed);
+  const archetype = resolvedArchetype ?? autoArchetype;
+  const profile = resolveFormProfile(archetype, formSeed);
+  const primitives = buildFieldPrimitives(tasks, categories, archetype, formSeed, profile);
+  const blendK =
+    (computeBlendK(completed.length, refineLevel) + animBlendBoost) * profile.blendScale;
+  const features = profile.features;
 
-  const stones: PlacedStone[] = [];
-  let runningHeight = 0;
-  let leanX = 0;
-  let leanZ = 0;
-
-  for (const task of completed) {
-    const params = computeStoneParams(task, categories);
-    if (!params) continue;
-
-    const geo = buildGeometry(params);
-    const fullHeight = getGeometryHeight(geo);
-    const halfHeight = fullHeight / 2;
-    const y = runningHeight + halfHeight;
-
-    leanX = leanX * LEAN_CORRECTION + params.jitter[0] * LEAN_PER_STONE;
-    leanZ = leanZ * LEAN_CORRECTION + params.jitter[1] * LEAN_PER_STONE;
-    leanX = Math.max(-MAX_LEAN, Math.min(MAX_LEAN, leanX));
-    leanZ = Math.max(-MAX_LEAN, Math.min(MAX_LEAN, leanZ));
-
-    const footprint = 0.9 * params.mass;
-    const jitterX = params.jitter[0] * footprint * JITTER_SCALE;
-    const jitterZ = params.jitter[1] * footprint * JITTER_SCALE;
-    const rotation = params.rotationSeed * Math.PI * 2;
-
-    stones.push({
-      params,
-      position: [jitterX, y, jitterZ],
-      rotation,
-      height: fullHeight,
-    });
-
-    runningHeight += fullHeight;
-  }
-
-  const serial = `CRN-${xfnv1a(completed.map((t) => t.id).join('')).toString(16).toUpperCase().slice(0, 6)}-${completed.length.toString().padStart(3, '0')}`;
+  const totalHeight =
+    primitives.length > 0
+      ? Math.max(...primitives.map((p) => p.position[1] + p.mass * p.aspect * 0.35))
+      : 0;
 
   return {
-    stones,
-    totalHeight: runningHeight,
-    lean: [leanX, leanZ],
-    serial,
+    primitives,
+    blendK,
+    blendScale: profile.blendScale,
+    blueprintId: profile.blueprintId,
+    archetype: autoArchetype,
+    resolvedArchetype,
+    features,
+    serial: buildSerial(completed),
+    totalHeight,
+    dominantMaterial: dominantMaterial(primitives),
+  };
+}
+
+export function fusedCacheKey(structure: FusedStructure): string {
+  const primSig = structure.primitives
+    .map(
+      (p) =>
+        `${p.taskId}:${p.type}:${p.mass.toFixed(3)}:${p.aspect.toFixed(3)}:${p.complexity.toFixed(3)}:${p.rotationSeed.toFixed(3)}:${p.position.map((v) => v.toFixed(3)).join(',')}`,
+    )
+    .join('|');
+  const feat = structure.features;
+  const featSig = `${feat.flattenBase}|${feat.boreRadius}|${feat.mirrorX}|${feat.concavity}`;
+  return fieldCacheKey(
+    structure.primitives.map((p) => p.taskId),
+    structure.blendK,
+    structure.archetype,
+    structure.resolvedArchetype,
+  ).concat(`|${primSig}|${featSig}|${structure.blueprintId}|${structure.blendScale}`);
+}
+
+export function computeStoneParams(task: Task, categories: Category[]) {
+  if (task.completedAt == null) return null;
+  const category = categories.find((c) => c.id === task.categoryId) ?? null;
+  return taskToPrimitive(task, category);
+}
+
+export function buildFormLibrary(tasks: Task[], categories: Category[]) {
+  return getCompletedTasks(tasks)
+    .map((task) => {
+      const params = computeStoneParams(task, categories);
+      if (!params) return null;
+      const category = categories.find((c) => c.id === task.categoryId) ?? null;
+      return { task, params, category };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null)
+    .reverse();
+}
+
+/** @deprecated v1 compat */
+export function buildCairnStructure(tasks: Task[], categories: Category[]) {
+  const fused = buildFusedStructure(tasks, categories, 0.5, null);
+  return {
+    stones: fused.primitives.map((p) => ({
+      params: {
+        ...p,
+        primitive: p.type,
+        jitter: [0, 0] as [number, number],
+      },
+      position: p.position,
+      rotation: p.rotationSeed * Math.PI * 2,
+      height: p.mass * p.aspect * 0.35,
+    })),
+    totalHeight: fused.totalHeight,
+    lean: [0, 0] as [number, number],
+    serial: fused.serial,
   };
 }

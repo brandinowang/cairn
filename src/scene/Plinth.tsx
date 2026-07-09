@@ -1,43 +1,36 @@
-import { Text } from '@react-three/drei';
-import type { CairnStructure } from '../types';
+import { useMemo } from 'react';
+import { useStore } from '../store/useStore';
 
-interface PlinthProps {
-  structure: CairnStructure;
-  empty?: boolean;
-}
+export function Plinth() {
+  const colorScheme = useStore((s) => s.colorScheme);
+  const isDark = colorScheme === 'dark';
 
-export function Plinth({ structure, empty = false }: PlinthProps) {
+  const colors = useMemo(
+    () =>
+      isDark
+        ? { base: '#3A4048', ring: '#565E68' }
+        : { base: '#CFD2D4', ring: '#B8BBBE' },
+    [isDark],
+  );
+
   return (
     <group>
       <mesh receiveShadow position={[0, -0.02, 0]}>
-        <cylinderGeometry args={[1.4, 1.5, 0.04, 64]} />
-        <meshStandardMaterial color="#9BA0A4" metalness={0.9} roughness={0.32} />
+        <cylinderGeometry args={[1.4, 1.42, 0.035, 80]} />
+        <meshStandardMaterial
+          color={colors.base}
+          metalness={isDark ? 0.35 : 0.55}
+          roughness={isDark ? 0.62 : 0.48}
+        />
       </mesh>
-      <mesh receiveShadow position={[0, -0.005, 0]}>
-        <cylinderGeometry args={[1.35, 1.35, 0.01, 64]} />
-        <meshStandardMaterial color="#141618" metalness={0.2} roughness={0.9} />
+      <mesh receiveShadow position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.32, 1.34, 80]} />
+        <meshStandardMaterial
+          color={colors.ring}
+          metalness={isDark ? 0.28 : 0.4}
+          roughness={isDark ? 0.68 : 0.55}
+        />
       </mesh>
-      {empty && (
-        <Text
-          position={[0, 0.15, 0]}
-          fontSize={0.06}
-          color="#565C61"
-          anchorX="center"
-          anchorY="middle"
-        >
-          complete a task to begin the cairn
-        </Text>
-      )}
-      <Text
-        position={[0, -0.08, 0.9]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.045}
-        color="#565C61"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {structure.serial}
-      </Text>
     </group>
   );
 }

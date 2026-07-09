@@ -1,3 +1,112 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .row-separator {
+    border-bottom: 1px dotted var(--line-strong);
+  }
+
+  .label-section {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .stage-gradient {
+    background: linear-gradient(180deg, var(--stage-top) 0%, var(--stage-floor) 100%);
+  }
+
+  .animate-task-in {
+    animation: task-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-chip-in {
+    animation: chip-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@layer components {
+  .btn-ghost {
+    font-size: 13px;
+    color: var(--ink-dim);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    transition: color 0.15s, transform 0.15s;
+  }
+
+  .btn-ghost:hover {
+    color: var(--ink);
+  }
+
+  .btn-ghost:active {
+    transform: scale(0.97);
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--surface-hi);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    transition: opacity 0.15s, transform 0.15s;
+    flex-shrink: 0;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.88;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+@keyframes task-in {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes menu-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-task-in,
+  .animate-chip-in {
+    animation: none;
+  }
+}

@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { ConvexGeometry } from 'three-stdlib';
 import type { StoneParams } from '../types';
 import { mulberry32, xfnv1a } from './rng';
 
@@ -12,7 +11,7 @@ function taskRng(params: StoneParams, offset = 0): () => number {
 export function geometryCacheKey(params: StoneParams): string {
   return [
     params.taskId,
-    params.primitive,
+    params.type,
     params.mass.toFixed(4),
     params.aspect.toFixed(4),
     params.complexity.toFixed(4),
@@ -101,37 +100,20 @@ function buildNodule(params: StoneParams): THREE.BufferGeometry {
   return geo;
 }
 
-function buildFacet(params: StoneParams): THREE.BufferGeometry {
-  const rng = taskRng(params, 42);
-  const points: THREE.Vector3[] = [];
-  for (let i = 0; i < 12; i++) {
-    points.push(
-      new THREE.Vector3(
-        (rng() - 0.5) * params.mass,
-        rng() * params.aspect * params.mass * 0.5,
-        (rng() - 0.5) * params.mass,
-      ),
-    );
-  }
-  const geo = new ConvexGeometry(points) as THREE.BufferGeometry;
-  applyComplexityNoise(geo, params.complexity * 0.6, xfnv1a(params.taskId) + 7);
-  return geo;
-}
-
 function buildRawGeometry(params: StoneParams): THREE.BufferGeometry {
-  switch (params.primitive) {
-    case 'slab':
+  switch (params.type) {
+    case 'box':
+    case 'wedge':
+    case 'octahedron':
       return buildSlab(params);
-    case 'shard':
+    case 'roundCone':
       return buildShard(params);
-    case 'core':
+    case 'cylinder':
       return buildCore(params);
-    case 'nodule':
+    case 'capsule':
       return buildNodule(params);
-    case 'facet':
-      return buildFacet(params);
     default:
-      return buildSlab(params);
+      return buildCore(params);
   }
 }
 

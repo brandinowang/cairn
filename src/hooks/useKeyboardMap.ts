@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import type { GenerativeMode, Priority } from '../types';
+import type { GenerativeMode } from '../types';
 
 export function useKeyboardMap() {
   const deleteConfirmRef = useRef<string | null>(null);
@@ -17,19 +17,42 @@ export function useKeyboardMap() {
         completeTask,
         uncompleteTask,
         deleteTask,
-        setPriority,
         setMode,
         togglePresentation,
+        toggleLockIn,
         setFocusedTask,
+        setView,
+        view,
+        selectForm,
       } = state;
 
-      if (e.key === 'n' && !isInput) {
+      if (e.key === 'Escape') {
+        if (state.lockInMode) {
+          e.preventDefault();
+          toggleLockIn();
+          return;
+        }
+        if (view === 'library') {
+          e.preventDefault();
+          if (state.selectedTaskId) selectForm(null);
+          else setView('main');
+          return;
+        }
+      }
+
+      if (e.key === 'l' && !isInput) {
+        e.preventDefault();
+        setView(view === 'library' ? 'main' : 'library');
+        return;
+      }
+
+      if (e.key === 'n' && !isInput && view === 'main') {
         e.preventDefault();
         document.getElementById('quick-add-input')?.focus();
         return;
       }
 
-      if (e.key === 'm' && !isInput) {
+      if (e.key === 'm' && !isInput && view === 'main') {
         e.preventDefault();
         const next: GenerativeMode = state.mode === 'cairn' ? 'voronoi' : 'cairn';
         setMode(next);
@@ -42,6 +65,13 @@ export function useKeyboardMap() {
         return;
       }
 
+      if (e.key === 'k' && !isInput && view === 'main') {
+        e.preventDefault();
+        toggleLockIn();
+        return;
+      }
+
+      if (view !== 'main') return;
       if (isInput && e.key !== 'Escape') return;
 
       if (!focusedTaskId) return;
@@ -56,18 +86,6 @@ export function useKeyboardMap() {
           if (task.completedAt) uncompleteTask(task.id);
           else completeTask(task.id);
           deleteConfirmRef.current = null;
-          break;
-        case '1':
-          e.preventDefault();
-          setPriority(task.id, 'low');
-          break;
-        case '2':
-          e.preventDefault();
-          setPriority(task.id, 'med');
-          break;
-        case '3':
-          e.preventDefault();
-          setPriority(task.id, 'high');
           break;
         case 'Delete':
         case 'Backspace':
@@ -116,17 +134,4 @@ export function useKeyboardMap() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-}
-
-export const PRIORITY_LABEL: Record<Priority, string> = {
-  low: 'L',
-  med: 'M',
-  high: 'H',
-};
-
-export const PRIORITY_CYCLE: Priority[] = ['low', 'med', 'high'];
-
-export function nextPriority(p: Priority): Priority {
-  const idx = PRIORITY_CYCLE.indexOf(p);
-  return PRIORITY_CYCLE[(idx + 1) % PRIORITY_CYCLE.length];
 }

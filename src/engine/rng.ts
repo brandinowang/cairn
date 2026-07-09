@@ -1,3 +1,5 @@
+import type { Task } from '../types';
+
 /** FNV-1a 32-bit hash → uint32 */
 export function xfnv1a(str: string): number {
   let h = 2166136261;
@@ -20,6 +22,32 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
+export function rollFormSeed(): number {
+  return xfnv1a(`${Date.now()}-${Math.random()}-${Math.random()}`);
+}
+
 export function deriveTaskSeed(id: string, title: string): number {
   return xfnv1a(id + title);
+}
+
+/** Unique deposit seed — rolled when a task is completed */
+export function deriveDepositSeed(
+  formSeed: number,
+  taskId: string,
+  completedAt: number,
+  title: string,
+): number {
+  return xfnv1a(`${formSeed}|${taskId}|${completedAt}|${title}`);
+}
+
+/** Re-roll deposit seeds for all completed tasks under a new session seed */
+export function resyncCompletedSeeds(tasks: Task[], formSeed: number): Task[] {
+  return tasks.map((task) =>
+    task.completedAt != null
+      ? {
+          ...task,
+          seed: deriveDepositSeed(formSeed, task.id, task.completedAt, task.title),
+        }
+      : task,
+  );
 }

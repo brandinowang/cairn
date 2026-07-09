@@ -20,8 +20,8 @@ export default {
         'mat-red': 'var(--mat-red)',
       },
       fontFamily: {
-        sans: ['Geist', 'system-ui', 'sans-serif'],
-        mono: ['"Geist Mono"', '"Berkeley Mono"', '"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        sans: ['"Geist Mono"', 'ui-monospace', 'monospace'],
+        mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         card: 'var(--radius-card)',
